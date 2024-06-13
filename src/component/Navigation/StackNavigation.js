@@ -2,7 +2,6 @@ import {StyleSheet, Text, View, Button} from 'react-native';
 import React from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import GameScreen from '../../screen/GameScreen';
-import HomeScreen from '../../screen/HomeScreen';
 import LevelSelectionScreen from '../LevelComponent/LevelSelectionScreen';
 
 
@@ -19,7 +18,6 @@ const StackNavigation = () => {
         fontWeight: 'bold',
       },
     }}>
-      {/* <Stack.Screen name="Home" component={HomeScreen} /> */}
       <Stack.Screen
         name="Game"
         component={GameScreen}
