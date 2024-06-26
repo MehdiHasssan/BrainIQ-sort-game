@@ -50,6 +50,10 @@ const GameScreen = ({route, navigation}) => {
     new Animated.Value(0),
   );
 
+  const [showStackAnimation, setShowStackAnimation] = useState(
+    new Array(levels[levelIndex].numberOfStacks).fill(false),
+  );
+
   const messages = useMemo(
     () => ['Great job!', 'Well done!', 'Keep it up!', 'Nice work!'],
     [],
@@ -114,29 +118,51 @@ const GameScreen = ({route, navigation}) => {
     }
     setIsLoading(false);
   }, []);
-  
 
   useEffect(() => {
     fetchLevel();
   }, [fetchLevel]);
-  
 
   useEffect(() => {
     if (!isLoading) {
       setColumns(getInitialState(levelIndex));
     }
   }, [levelIndex, isLoading]);
-  
+
   useEffect(() => {
     if (route.params?.indexLevel !== undefined) {
       setLevelIndex(route.params.indexLevel);
     }
   }, [route.params?.indexLevel]);
-  
+
+  // Locked a single stack when completed with same colors
+  const isStackLocked = stack => {
+    if (stack.length === 0) return false;
+    const firstDisk = stack[0];
+    return (
+      stack.every(disk => disk === firstDisk) &&
+      stack.length === levels[levelIndex].balls[firstDisk]
+    );
+  };
+
+  useEffect(() => {
+    const newShowStackAnimation = columns.map((column, idx) =>
+      isStackLocked(column),
+    );
+    setShowStackAnimation(newShowStackAnimation);
+  }, [columns]); // Reacts to changes in columns
 
   const handleDiskTap = colIndex => {
+    // if (!isGameActive || isStackLocked(columns[colIndex])) return;
     if (!isGameActive) return;
 
+    const stack = columns[colIndex];
+    if (isStackLocked(stack)) {
+      console.log(`Interaction blocked as stack ${colIndex} is locked.`);
+      return;
+    }
+
+    let newColumns = [...columns];
     if (selectedDisk === null) {
       if (columns[colIndex].length > 0) {
         const disk = columns[colIndex][0];
@@ -179,7 +205,7 @@ const GameScreen = ({route, navigation}) => {
       return;
     }
     const expectedBalls = level.balls;
-  
+
     const isCompleted = cols.every(col => {
       if (col.length === 0) return true;
       const color = col[0];
@@ -187,7 +213,7 @@ const GameScreen = ({route, navigation}) => {
         col.every(ball => ball === color) && col.length === expectedBalls[color]
       );
     });
-  
+
     if (isCompleted) {
       Animated.timing(completionAnim, {
         toValue: 1,
@@ -197,11 +223,13 @@ const GameScreen = ({route, navigation}) => {
         completionAnim.setValue(0);
         setIsGameActive(false);
         setShowAnimation(true);
-  
+
         const newLevelIndex = levelIndex + 1;
         const deviceId = await DeviceInfo.getUniqueId();
         const unlockedLevelKey = `unlocked_level_${deviceId}`;
-        const storedUnlockedLevel = await AsyncStorage.getItem(unlockedLevelKey);
+        const storedUnlockedLevel = await AsyncStorage.getItem(
+          unlockedLevelKey,
+        );
         if (
           !storedUnlockedLevel ||
           newLevelIndex > parseInt(storedUnlockedLevel)
@@ -211,15 +239,17 @@ const GameScreen = ({route, navigation}) => {
             newLevelIndex.toString(),
           );
         }
-        await AsyncStorage.setItem(`level_${deviceId}`, newLevelIndex.toString());
-  
+        await AsyncStorage.setItem(
+          `level_${deviceId}`,
+          newLevelIndex.toString(),
+        );
+
         if (!isAdLoaded) {
           loadAd();
         }
       });
     }
   };
-  
 
   const handleAnimationPress = useCallback(async () => {
     if (levelIndex === 0) {
@@ -326,6 +356,7 @@ const GameScreen = ({route, navigation}) => {
             <View key={idx} style={styles.bottle}>
               {column.map((color, colorIdx) => {
                 const isSelected = selectedDisk?.from === idx && colorIdx === 0;
+
                 return (
                   <Animated.View
                     key={colorIdx}
@@ -339,13 +370,13 @@ const GameScreen = ({route, navigation}) => {
                               {
                                 translateY: selectedDiskAnim.interpolate({
                                   inputRange: [0, 1],
-                                  outputRange: [0, -20], // Change the -20 value to control how high the disk jumps
+                                  outputRange: [0, -50], // Control the height of the jump
                                 }),
                               },
                               {
                                 scale: selectedDiskAnim.interpolate({
                                   inputRange: [0, 1],
-                                  outputRange: [1, 1.2], // Change the 1.2 value to control the scale when the disk jumps
+                                  outputRange: [1, 1.15], // Control the scale when the disk jumps
                                 }),
                               },
                             ],
@@ -355,12 +386,20 @@ const GameScreen = ({route, navigation}) => {
                   />
                 );
               })}
+              {showStackAnimation[idx] && (
+                <LottieView
+                  source={require('../../assets/celebration.json')}
+                  autoPlay
+                  loop={true}
+                  style={styles.lottieTop}
+                />
+              )}
               <TouchableOpacity
                 onPress={() => handleDiskTap(idx)}
                 style={{
                   width: '100%',
-                  height: '100%', // Ensure it covers the entire height of the column
-                  position: 'absolute', // Position over the entire column
+                  height: '100%',
+                  position: 'absolute',
                   justifyContent: 'center',
                   alignItems: 'center',
                 }}
@@ -602,6 +641,13 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 13,
     fontWeight: '500',
+  },
+  lottieTop: {
+    position: 'absolute', // Position relative to the parent (bottle)
+    top: -50, // Adjust as needed to position correctly above the stack
+    width: 100,
+    height: 100,
+    alignSelf: 'center', // Center it horizontally
   },
 });
 
