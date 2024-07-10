@@ -1,0 +1,13 @@
+{
+  "migIndex": 1,
+  "data": [
+    {
+      "path": "assets/fonts/Ga Maamli.ttf",
+      "sha1": "60e537042c085393fe254b0f1091850de6e1bb12"
+    },
+    {
+      "path": "assets/fonts/Roboto.ttf",
+      "sha1": "65f3f6a7e1bd2fa6f2df35e4b07775d7f1dde4f0"
+    }
+  ]
+}

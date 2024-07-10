@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useCallback} from 'react';
 import {
   ScrollView,
   View,
@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DeviceInfo from 'react-native-device-info';
+import {useFocusEffect} from '@react-navigation/native';
 import levels from './Level';
 import LinearGradient from 'react-native-linear-gradient';
 
@@ -15,7 +16,7 @@ const LevelSelectionScreen = ({navigation}) => {
   const [unlockedLevels, setUnlockedLevels] = useState(1);
 
   const fetchUnlockedLevel = useCallback(async () => {
-    const deviceId = DeviceInfo.getUniqueId();
+    const deviceId = await DeviceInfo.getUniqueId();
     const unlockedLevelKey = `unlocked_level_${deviceId}`;
     const storedUnlockedLevel = await AsyncStorage.getItem(unlockedLevelKey);
     if (storedUnlockedLevel !== null) {
@@ -27,9 +28,11 @@ const LevelSelectionScreen = ({navigation}) => {
     }
   }, []);
 
-  useEffect(() => {
-    fetchUnlockedLevel();
-  }, [fetchUnlockedLevel]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchUnlockedLevel();
+    }, [fetchUnlockedLevel])
+  );
 
   return (
     <LinearGradient colors={['#6dd5ed', '#2193b0']} style={{flex: 1}}>

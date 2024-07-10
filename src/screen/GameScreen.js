@@ -54,6 +54,10 @@ const GameScreen = ({route, navigation}) => {
     new Array(levels[levelIndex].numberOfStacks).fill(false),
   );
 
+  const BASE_HEIGHT = 10;  // Base height of the stack when it is empty
+  const HEIGHT_PER_DISK = 50;  // Height added for each disk
+
+
   const messages = useMemo(
     () => ['Great job!', 'Well done!', 'Keep it up!', 'Nice work!'],
     [],
@@ -205,7 +209,7 @@ const GameScreen = ({route, navigation}) => {
       return;
     }
     const expectedBalls = level.balls;
-
+  
     const isCompleted = cols.every(col => {
       if (col.length === 0) return true;
       const color = col[0];
@@ -213,7 +217,7 @@ const GameScreen = ({route, navigation}) => {
         col.every(ball => ball === color) && col.length === expectedBalls[color]
       );
     });
-
+  
     if (isCompleted) {
       Animated.timing(completionAnim, {
         toValue: 1,
@@ -223,33 +227,23 @@ const GameScreen = ({route, navigation}) => {
         completionAnim.setValue(0);
         setIsGameActive(false);
         setShowAnimation(true);
-
+  
         const newLevelIndex = levelIndex + 1;
         const deviceId = await DeviceInfo.getUniqueId();
         const unlockedLevelKey = `unlocked_level_${deviceId}`;
-        const storedUnlockedLevel = await AsyncStorage.getItem(
-          unlockedLevelKey,
-        );
-        if (
-          !storedUnlockedLevel ||
-          newLevelIndex > parseInt(storedUnlockedLevel)
-        ) {
-          await AsyncStorage.setItem(
-            unlockedLevelKey,
-            newLevelIndex.toString(),
-          );
+        const storedUnlockedLevel = await AsyncStorage.getItem(unlockedLevelKey);
+        if (!storedUnlockedLevel || newLevelIndex > parseInt(storedUnlockedLevel)) {
+          await AsyncStorage.setItem(unlockedLevelKey, newLevelIndex.toString());
         }
-        await AsyncStorage.setItem(
-          `level_${deviceId}`,
-          newLevelIndex.toString(),
-        );
-
+        await AsyncStorage.setItem(`level_${deviceId}`, newLevelIndex.toString());
+  
         if (!isAdLoaded) {
           loadAd();
         }
       });
     }
   };
+  
 
   const handleAnimationPress = useCallback(async () => {
     if (levelIndex === 0) {
@@ -533,8 +527,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   leveltext: {
-    justifyContent: 'center',
-    alignItems: 'center',
+    top:-100,
     color: '#fff',
     fontWeight: '800',
     fontSize: 24,
