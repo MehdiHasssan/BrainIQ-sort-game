@@ -13,8 +13,10 @@ import {
 import LottieView from 'lottie-react-native';
 import levels from '../component/LevelComponent/Level';
 import Icon from 'react-native-vector-icons/Foundation';
-import Bars from 'react-native-vector-icons/FontAwesome';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Bars from 'react-native-vector-icons/FontAwesome';
+import Bottle from 'react-native-vector-icons/FontAwesome6';
+
 import DeviceInfo from 'react-native-device-info';
 import {
   BannerAd,
@@ -49,14 +51,14 @@ const GameScreen = ({route, navigation}) => {
   const [selectedDiskAnim, setSelectedDiskAnim] = useState(
     new Animated.Value(0),
   );
+  const [canAddStack, setCanAddStack] = useState(false);
 
   const [showStackAnimation, setShowStackAnimation] = useState(
     new Array(levels[levelIndex].numberOfStacks).fill(false),
   );
 
-  const BASE_HEIGHT = 10;  // Base height of the stack when it is empty
-  const HEIGHT_PER_DISK = 50;  // Height added for each disk
-
+  const BASE_HEIGHT = 10; // Base height of the stack when it is empty
+  const HEIGHT_PER_DISK = 50; // Height added for each disk
 
   const messages = useMemo(
     () => ['Great job!', 'Well done!', 'Keep it up!', 'Nice work!'],
@@ -83,24 +85,52 @@ const GameScreen = ({route, navigation}) => {
     }
     const allBalls = generateColors(level.balls);
     const shuffledBalls = shuffleArray(allBalls);
-    const stacks = [];
+    let stacks = Array.from({length: level.numberOfStacks}, () => []);
 
-    for (let i = 0; i < level.numberOfStacks; i++) {
-      if (shuffledBalls.length > 0) {
-        stacks.push(
-          shuffledBalls.splice(
-            0,
-            Math.min(shuffledBalls.length, level.maxStackSize),
-          ),
+    // Randomly choose one stack to remain empty
+    const emptyStackIndex = Math.floor(Math.random() * stacks.length);
+
+    // Distribute balls randomly across stacks except the one chosen to remain empty
+    shuffledBalls.forEach(ball => {
+      let randomStackIndex = Math.floor(Math.random() * stacks.length);
+      // Ensure that the randomly chosen stack is not the one designated to remain empty
+      while (randomStackIndex === emptyStackIndex) {
+        randomStackIndex = Math.floor(Math.random() * stacks.length);
+      }
+
+      if (stacks[randomStackIndex].length < level.maxStackSize) {
+        stacks[randomStackIndex].push(ball);
+      } else {
+        // Find another stack that is not full and is not the empty stack
+        const availableStack = stacks.findIndex(
+          (stack, index) =>
+            index !== emptyStackIndex && stack.length < level.maxStackSize,
         );
+        if (availableStack !== -1) {
+          stacks[availableStack].push(ball);
+        }
+      }
+    });
+
+    // Verify and shuffle any sorted stack to ensure it starts unsorted
+    stacks = stacks.map((stack, index) => {
+      if (index !== emptyStackIndex && isStackSorted(stack)) {
+        return shuffleArray(stack);
+      }
+      return stack;
+    });
+
+    return stacks;
+  };
+
+  const isStackSorted = stack => {
+    if (stack.length <= 1) return false; // A single disk or an empty stack can't be sorted
+    for (let i = 1; i < stack.length; i++) {
+      if (stack[i] !== stack[0]) {
+        return false; // Found a different disk, not sorted
       }
     }
-
-    while (stacks.length < level.numberOfStacks) {
-      stacks.push([]);
-    }
-
-    return shuffleArray(stacks);
+    return true; // All disks are the same, stack is sorted
   };
 
   const shuffleArray = array => {
@@ -157,7 +187,7 @@ const GameScreen = ({route, navigation}) => {
   }, [columns]); // Reacts to changes in columns
 
   const handleDiskTap = colIndex => {
-    // if (!isGameActive || isStackLocked(columns[colIndex])) return;
+    // Prevent interaction if the game is inactive or the stack is already locked.
     if (!isGameActive) return;
 
     const stack = columns[colIndex];
@@ -167,12 +197,13 @@ const GameScreen = ({route, navigation}) => {
     }
 
     let newColumns = [...columns];
+    // Check if there's a selected disk
     if (selectedDisk === null) {
-      if (columns[colIndex].length > 0) {
-        const disk = columns[colIndex][0];
+      if (stack.length > 0) {
+        const disk = stack[0];
         setSelectedDisk({disk, from: colIndex});
 
-        // Trigger the animation
+        // Trigger the animation for selecting a disk
         Animated.spring(selectedDiskAnim, {
           toValue: 1,
           friction: 5,
@@ -181,22 +212,30 @@ const GameScreen = ({route, navigation}) => {
         loadAd();
       }
     } else {
-      if (
-        selectedDisk.from !== colIndex &&
-        (columns[colIndex].length < 4 || columns[colIndex].length === 0)
-      ) {
-        const newColumns = [...columns];
-        newColumns[selectedDisk.from] = newColumns[selectedDisk.from].slice(1);
-        newColumns[colIndex] = [selectedDisk.disk, ...newColumns[colIndex]];
-        setColumns(newColumns);
-        setSelectedDisk(null);
+      // Check if the selected disk can be placed on this column
+      if (selectedDisk.from !== colIndex) {
+        const topDisk = stack[0];
+        const isSameColor = !topDisk || topDisk === selectedDisk.disk; // Allow placement if stack is empty or top disk color matches
 
-        // Reset the animation
-        selectedDiskAnim.setValue(0);
-        checkCompletion(newColumns);
+        if (isSameColor && (stack.length < 4 || stack.length === 0)) {
+          newColumns[selectedDisk.from] = newColumns[selectedDisk.from].slice(
+            1,
+          );
+          newColumns[colIndex] = [selectedDisk.disk, ...newColumns[colIndex]];
+          setColumns(newColumns);
+          setSelectedDisk(null);
+
+          // Reset the animation after placement
+          selectedDiskAnim.setValue(0);
+          checkCompletion(newColumns);
+        } else {
+          // If color doesn't match or other conditions fail, deselect the disk and reset animation
+          setSelectedDisk(null);
+          selectedDiskAnim.setValue(0);
+        }
       } else {
+        // Deselect if the same column is tapped again and reset animation
         setSelectedDisk(null);
-        // Reset the animation
         selectedDiskAnim.setValue(0);
       }
     }
@@ -209,7 +248,7 @@ const GameScreen = ({route, navigation}) => {
       return;
     }
     const expectedBalls = level.balls;
-  
+
     const isCompleted = cols.every(col => {
       if (col.length === 0) return true;
       const color = col[0];
@@ -217,7 +256,7 @@ const GameScreen = ({route, navigation}) => {
         col.every(ball => ball === color) && col.length === expectedBalls[color]
       );
     });
-  
+
     if (isCompleted) {
       Animated.timing(completionAnim, {
         toValue: 1,
@@ -227,23 +266,33 @@ const GameScreen = ({route, navigation}) => {
         completionAnim.setValue(0);
         setIsGameActive(false);
         setShowAnimation(true);
-  
+
         const newLevelIndex = levelIndex + 1;
         const deviceId = await DeviceInfo.getUniqueId();
         const unlockedLevelKey = `unlocked_level_${deviceId}`;
-        const storedUnlockedLevel = await AsyncStorage.getItem(unlockedLevelKey);
-        if (!storedUnlockedLevel || newLevelIndex > parseInt(storedUnlockedLevel)) {
-          await AsyncStorage.setItem(unlockedLevelKey, newLevelIndex.toString());
+        const storedUnlockedLevel = await AsyncStorage.getItem(
+          unlockedLevelKey,
+        );
+        if (
+          !storedUnlockedLevel ||
+          newLevelIndex > parseInt(storedUnlockedLevel)
+        ) {
+          await AsyncStorage.setItem(
+            unlockedLevelKey,
+            newLevelIndex.toString(),
+          );
         }
-        await AsyncStorage.setItem(`level_${deviceId}`, newLevelIndex.toString());
-  
+        await AsyncStorage.setItem(
+          `level_${deviceId}`,
+          newLevelIndex.toString(),
+        );
+
         if (!isAdLoaded) {
           loadAd();
         }
       });
     }
   };
-  
 
   const handleAnimationPress = useCallback(async () => {
     if (levelIndex === 0) {
@@ -323,6 +372,8 @@ const GameScreen = ({route, navigation}) => {
     );
   }
 
+  const addBottle = () => {};
+
   return (
     <SafeAreaView style={styles.body}>
       <BackgroundColors levelIndex={levelIndex} />
@@ -331,9 +382,14 @@ const GameScreen = ({route, navigation}) => {
           <Bars name="bars" size={34} color="#fff" />
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={resetGame}>
-          <Icon name="loop" size={34} color="#fff" />
-        </TouchableOpacity>
+        <View style={styles.headerIcons}>
+          <TouchableOpacity onPress={addBottle} style={styles.bottleButton}>
+            <Bottle name="prescription-bottle-medical" size={30} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={resetGame}>
+            <Icon name="loop" size={34} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
       <View style={styles.mainContainer}>
         <Text style={styles.leveltext}>LEVEL : {levelIndex + 1}</Text>
@@ -527,10 +583,10 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   leveltext: {
-    top:-100,
     color: '#fff',
     fontWeight: '800',
     fontSize: 24,
+    alignItems: 'center',
   },
   image: {
     flex: 1,
@@ -641,6 +697,14 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     alignSelf: 'center', // Center it horizontally
+  },
+  bottleButton: {
+    marginRight: width * 0.05, // Responsive margin using 5% of screen width
+  },
+  headerIcons: {
+    flexDirection: 'row',
+    justifyContent: 'center', // Center the buttons horizontally
+    alignItems: 'center',
   },
 });
 

@@ -1,4 +1,4 @@
-package com.colormatchgame
+package com.genz.brainiqsort
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate

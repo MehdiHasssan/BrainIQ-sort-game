@@ -7,11 +7,11 @@
 #define TIMEOUT_SECONDS 600
 #define TEXT_TO_LOOK_FOR @"Welcome to React"
 
-@interface ColorMatchGameTests : XCTestCase
+@interface BrainIQSortTests : XCTestCase
 
 @end
 
-@implementation ColorMatchGameTests
+@implementation BrainIQSortTests
 
 - (BOOL)findSubviewInView:(UIView *)view matching:(BOOL (^)(UIView *view))test
 {

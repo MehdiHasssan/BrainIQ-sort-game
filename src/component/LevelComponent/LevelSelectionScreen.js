@@ -1,4 +1,4 @@
-import React, {useState, useCallback} from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   ScrollView,
   View,
@@ -8,11 +8,11 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DeviceInfo from 'react-native-device-info';
-import {useFocusEffect} from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import levels from './Level';
 import LinearGradient from 'react-native-linear-gradient';
 
-const LevelSelectionScreen = ({navigation}) => {
+const LevelSelectionScreen = ({ navigation }) => {
   const [unlockedLevels, setUnlockedLevels] = useState(1);
 
   const fetchUnlockedLevel = useCallback(async () => {
@@ -35,7 +35,7 @@ const LevelSelectionScreen = ({navigation}) => {
   );
 
   return (
-    <LinearGradient colors={['#6dd5ed', '#2193b0']} style={{flex: 1}}>
+    <LinearGradient colors={['#2c3e50', '#4ca1af']} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>Levels</Text>
         <View style={styles.levelsContainer}>
@@ -43,13 +43,16 @@ const LevelSelectionScreen = ({navigation}) => {
             <TouchableOpacity
               style={[
                 styles.levelButton,
-                {backgroundColor: index < unlockedLevels ? 'green' : 'grey'},
+                {
+                  backgroundColor: index < unlockedLevels ? '#1abc9c' : '#95a5a6',
+                },
+                index < unlockedLevels && styles.unlockedLevelButton,
               ]}
               key={index}
               disabled={index >= unlockedLevels}
-              onPress={() => navigation.navigate('Game', {indexLevel: index})}
+              onPress={() => navigation.navigate('Game', { indexLevel: index })}
             >
-              <Text style={styles.levelText}>{` ${index + 1}`}</Text>
+              <Text style={styles.levelText}>{`${index + 1}`}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -64,11 +67,16 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     alignItems: 'center',
     paddingVertical: 20,
+    paddingHorizontal: 10,
   },
   title: {
-    fontSize: 24,
-    color: '#fff',
-    marginBottom: 20,
+    fontSize: 28,
+    color: '#ecf0f1',
+    fontWeight: 'bold',
+    marginBottom: 30,
+    textShadowColor: '#2c3e50',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 5,
   },
   levelsContainer: {
     flexDirection: 'row',
@@ -77,16 +85,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   levelButton: {
-    width: 50,
-    height: 50,
+    width: 60,
+    height: 60,
     justifyContent: 'center',
     alignItems: 'center',
-    margin: 5,
-    borderRadius: 10,
+    margin: 10,
+    borderRadius: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 2 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  unlockedLevelButton: {
+    backgroundColor: '#1abc9c',
   },
   levelText: {
-    color: '#fff',
-    fontSize: 16,
+    color: '#ecf0f1',
+    fontSize: 20,
+    fontWeight: 'bold',
+    textShadowColor: '#2c3e50',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
 });
 

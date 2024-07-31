@@ -1,4 +1,4 @@
-package com.colormatchgame
+package com.genz.brainiqsort
 
 import android.app.Application
 import com.facebook.react.PackageList
@@ -10,6 +10,9 @@ import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.load
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.facebook.react.defaults.DefaultReactNativeHost
 import com.facebook.soloader.SoLoader
+
+import com.genz.brainiqsort.BuildConfig
+
 
 class MainApplication : Application(), ReactApplication {
 
